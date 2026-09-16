@@ -1,0 +1,63 @@
+```yaml
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Create Android project
+        run: |
+          if [ ! -d "android" ]; then
+            flutter create --platforms=android --org com.project --project-name egg_pam_controller .
+          fi
+
+      # ตัวเซิร์ฟเวอร์จะทำการเขียนไฟล์ปัญหากระจุก (pubspec.yaml) ให้เองแบบอัตโนมัติ สวยงาม 100%
+      - name: Setup Configuration File
+        run: |
+          echo 'name: egg_pam_controller' > pubspec.yaml
+          echo 'description: "A Flutter project for PSRU Egg Pam."' >> pubspec.yaml
+          echo 'publish_to: "none"' >> pubspec.yaml
+          echo 'version: 1.0.0+1' >> pubspec.yaml
+          echo 'environment:' >> pubspec.yaml
+          echo '  sdk: ">=3.0.0 <4.0.0"' >> pubspec.yaml
+          echo 'dependencies:' >> pubspec.yaml
+          echo '  flutter:' >> pubspec.yaml
+          echo '    sdk: flutter' >> pubspec.yaml
+          echo '  flutter_blue_plus: ^1.31.0' >> pubspec.yaml
+          echo 'dev_dependencies:' >> pubspec.yaml
+          echo '  flutter_test:' >> pubspec.yaml
+          echo '    sdk: flutter' >> pubspec.yaml
+          echo '  flutter_lints: ^3.0.0' >> pubspec.yaml
+          echo 'flutter:' >> pubspec.yaml
+          echo '  uses-material-design: true' >> pubspec.yaml
+
+      - name: Get packages and Build
+        run: |
+          flutter clean
+          flutter pub get
+          flutter build apk --release
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ESP32-EGG-PAM-APK
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
